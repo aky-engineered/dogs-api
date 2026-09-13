@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-dog
+      author: aqif
+      changes:
+        - createTable:
+            tableName: dog
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(100), constraints: { nullable: false } }
+              - column:
+                  name: breed_id
+                  type: BIGINT
+                  constraints: { foreignKeyName: fk_dog_breed, references: breed(id) }
+              - column:
+                  name: supplier_id
+                  type: BIGINT
+                  constraints: { foreignKeyName: fk_dog_supplier, references: supplier(id) }
+              - column: { name: badge_id, type: VARCHAR(50), constraints: { unique: true, uniqueConstraintName: uk_dog_badge_id } }
+              - column: { name: gender, type: VARCHAR(10), defaultValue: UNKNOWN, constraints: { nullable: false } }
+              - column: { name: birth_date, type: DATE }
+              - column: { name: date_acquired, type: DATE }
+              - column:
+                  name: status_id
+                  type: BIGINT
+                  constraints: { nullable: false, foreignKeyName: fk_dog_status, references: dog_status(id) }
+              - column: { name: leaving_date, type: DATE }
+              - column:
+                  name: leaving_reason_id
+                  type: BIGINT
+                  constraints: { foreignKeyName: fk_dog_leaving_reason, references: leaving_reason(id) }
+              - column: { name: kennelling_characteristic, type: TEXT }
+              - column: { name: created_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: updated_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: deleted_at, type: DATETIME(6) }

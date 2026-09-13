@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-seed-dog-status
+      author: aqif
+      changes:
+        - insert: { tableName: dog_status, columns: [ { column: { name: name, value: "In Training" } } ] }
+        - insert: { tableName: dog_status, columns: [ { column: { name: name, value: "In Service" } } ] }
+        - insert: { tableName: dog_status, columns: [ { column: { name: name, value: "Retired" } } ] }
+        - insert: { tableName: dog_status, columns: [ { column: { name: name, value: "Left" } } ] }
+
+  - changeSet:
+      id: 003-seed-leaving-reason
+      author: aqif
+      changes:
+        - insert: { tableName: leaving_reason, columns: [ { column: { name: name, value: "Transferred" } } ] }
+        - insert: { tableName: leaving_reason, columns: [ { column: { name: name, value: "Retired (Put Down)" } } ] }
+        - insert: { tableName: leaving_reason, columns: [ { column: { name: name, value: "KIA" } } ] }
+        - insert: { tableName: leaving_reason, columns: [ { column: { name: name, value: "Rejected" } } ] }
+        - insert: { tableName: leaving_reason, columns: [ { column: { name: name, value: "Retired (Re-housed)" } } ] }
+        - insert: { tableName: leaving_reason, columns: [ { column: { name: name, value: "Died" } } ] }

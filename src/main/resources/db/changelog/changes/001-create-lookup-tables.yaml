@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-breed
+      author: aqif
+      changes:
+        - createTable:
+            tableName: breed
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(100), constraints: { nullable: false, unique: true, uniqueConstraintName: uk_breed_name } }
+              - column: { name: created_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: updated_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: deleted_at, type: DATETIME(6) }
+
+  - changeSet:
+      id: 001-create-supplier
+      author: aqif
+      changes:
+        - createTable:
+            tableName: supplier
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(100), constraints: { nullable: false, unique: true, uniqueConstraintName: uk_supplier_name } }
+              - column: { name: created_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: updated_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: deleted_at, type: DATETIME(6) }
+
+  - changeSet:
+      id: 001-create-dog-status
+      author: aqif
+      changes:
+        - createTable:
+            tableName: dog_status
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(100), constraints: { nullable: false, unique: true, uniqueConstraintName: uk_dog_status_name } }
+              - column: { name: created_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: updated_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: deleted_at, type: DATETIME(6) }
+
+  - changeSet:
+      id: 001-create-leaving-reason
+      author: aqif
+      changes:
+        - createTable:
+            tableName: leaving_reason
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(100), constraints: { nullable: false, unique: true, uniqueConstraintName: uk_leaving_reason_name } }
+              - column: { name: created_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: updated_at, type: DATETIME(6), defaultValueComputed: CURRENT_TIMESTAMP(6), constraints: { nullable: false } }
+              - column: { name: deleted_at, type: DATETIME(6) }

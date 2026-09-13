@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-create-lookup-tables.yaml
+  - include:
+      file: db/changelog/changes/002-create-dog-table.yaml
+  - include:
+      file: db/changelog/changes/003-seed-status-and-leaving-reason.yaml
