@@ -15,6 +15,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,7 +89,7 @@ class DogRepositoryTest {
     void excludesSoftDeletedDogsFromActiveQueries() {
         Dog active = dogRepository.save(newDog("Active"));
         Dog deleted = newDog("Deleted");
-        deleted.setDeletedAt(LocalDate.now());
+        deleted.setDeletedAt(Instant.now());
         dogRepository.save(deleted);
         flushAndClear();
 
@@ -111,7 +112,7 @@ class DogRepositoryTest {
         dog.setStatus(retiredStatus);
         Long id = dogRepository.save(dog).getId();
 
-        retiredStatus.setDeletedAt(LocalDate.now());
+        retiredStatus.setDeletedAt(Instant.now());
         flushAndClear();
 
         Dog found = dogRepository.findByIdAndDeletedAtIsNull(id).orElseThrow();

@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDate;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,7 +52,7 @@ class LookupRepositoryTest {
     void excludesSoftDeletedLookupValues() {
         Breed activeBreed = breedRepository.save(breed("Labrador Retriever"));
         Breed deletedBreed = breed("Alsatian");
-        deletedBreed.setDeletedAt(LocalDate.now());
+        deletedBreed.setDeletedAt(Instant.now());
         breedRepository.save(deletedBreed);
         entityManager.flush();
         entityManager.clear();
