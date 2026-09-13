@@ -1,4 +1,10 @@
 HELP.md
+
+### Maven ###
+target/
+!.mvn/wrapper/maven-wrapper.properties
+
+### Gradle (retained from the pre-Maven scaffold) ###
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -35,3 +41,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### macOS ###
+.DS_Store
