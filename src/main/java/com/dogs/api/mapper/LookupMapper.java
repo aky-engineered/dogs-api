@@ -5,44 +5,40 @@ import com.dogs.api.dto.LookupResponse;
 import com.dogs.api.model.Breed;
 import com.dogs.api.model.DogStatus;
 import com.dogs.api.model.LeavingReason;
-import com.dogs.api.model.LookupEntity;
 import com.dogs.api.model.Supplier;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+// Request DTOs only carry editable fields, so id, timestamps and deletedAt are never overwritten
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface LookupMapper {
 
-    LookupResponse toResponse(LookupEntity entity);
+    LookupResponse toResponse(Breed breed);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deletedAt", ignore = true)
+    LookupResponse toResponse(Supplier supplier);
+
+    LookupResponse toResponse(DogStatus dogStatus);
+
+    LookupResponse toResponse(LeavingReason leavingReason);
+
     Breed toBreed(LookupRequest request);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deletedAt", ignore = true)
     Supplier toSupplier(LookupRequest request);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deletedAt", ignore = true)
     DogStatus toDogStatus(LookupRequest request);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deletedAt", ignore = true)
     LeavingReason toLeavingReason(LookupRequest request);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "deletedAt", ignore = true)
-    void update(LookupRequest request, @MappingTarget LookupEntity entity);
+    void update(LookupRequest request, @MappingTarget Breed breed);
+
+    void update(LookupRequest request, @MappingTarget Supplier supplier);
+
+    // A code is fixed once created, so updates only ever change the name
+    @Mapping(target = "code", ignore = true)
+    void update(LookupRequest request, @MappingTarget DogStatus dogStatus);
+
+    @Mapping(target = "code", ignore = true)
+    void update(LookupRequest request, @MappingTarget LeavingReason leavingReason);
 }

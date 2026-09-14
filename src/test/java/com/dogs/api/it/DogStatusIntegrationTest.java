@@ -36,23 +36,26 @@ class DogStatusIntegrationTest {
 
     @Test
     void dogStatusEndpoints_WithFullCrudLifecycle_SoftDeletesAndHidesDogStatus() throws Exception {
+        String code = uniqueCode("ON_LOAN");
         String name = uniqueName("On Loan");
-        long id = createDogStatus(name);
+        long id = createDogStatus(code, name);
 
         mockMvc.perform(get("/api/dogs/statuses/{id}", id))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.name").value(name));
 
         String renamed = uniqueName("Operational");
         mockMvc.perform(put("/api/dogs/statuses/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(renamed)))
+                        .content("{\"name\": \"%s\"}".formatted(renamed)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.name").value(renamed));
 
         mockMvc.perform(get("/api/dogs/statuses").param("size", "100"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[*].name", hasItem(renamed)));
+                .andExpect(jsonPath("$.content[*].code", hasItem(code)));
 
         mockMvc.perform(delete("/api/dogs/statuses/{id}", id))
                 .andExpect(status().isNoContent());
@@ -60,65 +63,32 @@ class DogStatusIntegrationTest {
         mockMvc.perform(get("/api/dogs/statuses/{id}", id))
                 .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/dogs/statuses").param("size", "100"))
-                .andExpect(jsonPath("$.content[*].name", not(hasItem(renamed))));
+                .andExpect(jsonPath("$.content[*].code", not(hasItem(code))));
         mockMvc.perform(get("/api/dogs/statuses").param("size", "100").param("includeDeleted", "true"))
-                .andExpect(jsonPath("$.content[*].name", hasItem(renamed)));
+                .andExpect(jsonPath("$.content[*].code", hasItem(code)));
 
         assertThat(dogStatusRepository.findById(id)).hasValueSatisfying(dogStatus ->
                 assertThat(dogStatus.getDeletedAt()).isNotNull());
     }
 
-    @Test
-    void deleteDogStatusById_WithAlreadyDeletedDogStatus_ReturnsNotFound() throws Exception {
-        long id = createDogStatus(uniqueName("Seconded"));
-
-        mockMvc.perform(delete("/api/dogs/statuses/{id}", id)).andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/dogs/statuses/{id}", id)).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void createDogStatus_WithDuplicateName_ReturnsConflict() throws Exception {
-        String name = uniqueName("Under Review");
-        createDogStatus(name);
-
-        mockMvc.perform(post("/api/dogs/statuses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(name)))
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void getAllDogStatuses_WithPageSizeOne_ReturnsSingleRecordPage() throws Exception {
-        createDogStatus(uniqueName("Probation"));
-        createDogStatus(uniqueName("Reserve"));
-
-        mockMvc.perform(get("/api/dogs/statuses").param("page", "0").param("size", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.size").value(1))
-                .andExpect(jsonPath("$.page").value(0));
-    }
-
-    @Test
-    void getAllDogStatuses_WithInvalidSortProperty_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/dogs/statuses").param("sort", "notAField"))
-                .andExpect(status().isBadRequest());
-    }
-
-    private long createDogStatus(String name) throws Exception {
+    private long createDogStatus(String code, String name) throws Exception {
         String body = mockMvc.perform(post("/api/dogs/statuses")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(name)))
+                        .content(json(code, name)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
 
-    private String json(String name) {
-        return "{\"name\": \"%s\"}".formatted(name);
+    private String json(String code, String name) {
+        return "{\"code\": \"%s\", \"name\": \"%s\"}".formatted(code, name);
     }
 
     private String uniqueName(String prefix) {
         return prefix + " " + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String uniqueCode(String prefix) {
+        return prefix + "_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }

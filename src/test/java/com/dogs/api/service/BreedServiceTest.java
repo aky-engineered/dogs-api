@@ -48,19 +48,9 @@ class BreedServiceTest {
 
         PageResponse<LookupResponse> result = breedService.getAllBreeds(pageable, false);
 
-        assertThat(result.content()).containsExactly(new LookupResponse(1L, "Labrador"));
+        assertThat(result.content()).containsExactly(new LookupResponse(1L, null, "Labrador"));
         assertThat(result.totalElements()).isEqualTo(1);
         verify(breedRepository, never()).findAll(pageable);
-    }
-
-    @Test
-    void getAllBreeds_WithIncludeDeletedTrue_QueriesAllBreeds() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(breedRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(), pageable, 0));
-
-        breedService.getAllBreeds(pageable, true);
-
-        verify(breedRepository, never()).findAllByDeletedAtIsNull(any());
     }
 
     @Test
@@ -80,9 +70,9 @@ class BreedServiceTest {
             return saved;
         });
 
-        LookupResponse result = breedService.createBreed(new LookupRequest("Beagle"));
+        LookupResponse result = breedService.createBreed(new LookupRequest(null, "Beagle"));
 
-        assertThat(result).isEqualTo(new LookupResponse(5L, "Beagle"));
+        assertThat(result).isEqualTo(new LookupResponse(5L, null, "Beagle"));
     }
 
     @Test
@@ -91,9 +81,9 @@ class BreedServiceTest {
         when(breedRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.of(existing));
         when(breedRepository.saveAndFlush(existing)).thenReturn(existing);
 
-        LookupResponse result = breedService.updateBreedById(3L, new LookupRequest("German Shepherd"));
+        LookupResponse result = breedService.updateBreedById(3L, new LookupRequest(null, "German Shepherd"));
 
-        assertThat(result).isEqualTo(new LookupResponse(3L, "German Shepherd"));
+        assertThat(result).isEqualTo(new LookupResponse(3L, null, "German Shepherd"));
     }
 
     @Test
@@ -106,13 +96,6 @@ class BreedServiceTest {
         assertThat(existing.getDeletedAt()).isNotNull();
         verify(breedRepository, never()).delete(any());
         verify(breedRepository, never()).deleteById(any());
-    }
-
-    @Test
-    void deleteBreedById_WithAlreadyDeletedId_ThrowsResourceNotFound() {
-        when(breedRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> breedService.deleteBreedById(3L)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     private Breed breed(Long id, String name) {

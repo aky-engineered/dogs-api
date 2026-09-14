@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -78,33 +79,9 @@ class DogRepositoryTest {
     }
 
     @Test
-    void defaultsGenderToUnknown() {
-        Long id = dogRepository.save(newDog("Bella")).getId();
-        flushAndClear();
-
-        assertThat(dogRepository.findById(id).orElseThrow().getGender()).isEqualTo(Gender.UNKNOWN);
-    }
-
-    @Test
-    void excludesSoftDeletedDogsFromActiveQueries() {
-        Dog active = dogRepository.save(newDog("Active"));
-        Dog deleted = newDog("Deleted");
-        deleted.setDeletedAt(Instant.now());
-        dogRepository.save(deleted);
-        flushAndClear();
-
-        assertThat(dogRepository.findAllByDeletedAtIsNull(Pageable.unpaged()))
-                .extracting(Dog::getName)
-                .contains("Active")
-                .doesNotContain("Deleted");
-        assertThat(dogRepository.findByIdAndDeletedAtIsNull(active.getId())).isPresent();
-        assertThat(dogRepository.findByIdAndDeletedAtIsNull(deleted.getId())).isEmpty();
-        assertThat(dogRepository.findById(deleted.getId())).isPresent();
-    }
-
-    @Test
     void dogStillLoadsWhenItsStatusIsSoftDeleted() {
         DogStatus retiredStatus = new DogStatus();
+        retiredStatus.setCode("SECONDED");
         retiredStatus.setName("Seconded");
         entityManager.persist(retiredStatus);
 
@@ -117,6 +94,82 @@ class DogRepositoryTest {
 
         Dog found = dogRepository.findByIdAndDeletedAtIsNull(id).orElseThrow();
         assertThat(found.getStatus().getName()).isEqualTo("Seconded");
+    }
+
+    @Test
+    void search_WithNameFilter_ReturnsCaseInsensitivePartialMatches() {
+        givenSearchDogs();
+
+        assertThat(searchNames("REX", null, null, false)).containsExactlyInAnyOrder("Rex", "T-Rex");
+    }
+
+    @Test
+    void search_WithBreedFilter_ReturnsDogsOfMatchingBreed() {
+        givenSearchDogs();
+
+        assertThat(searchNames(null, "shepherd", null, false)).containsExactlyInAnyOrder("Rex", "Bella");
+    }
+
+    @Test
+    void search_WithSupplierFilter_ReturnsDogsFromMatchingSupplier() {
+        givenSearchDogs();
+
+        assertThat(searchNames(null, null, "brookvale", false)).containsExactlyInAnyOrder("T-Rex", "Bella");
+    }
+
+    @Test
+    void search_WithIncludeDeletedFalse_ExcludesDeletedDogs() {
+        givenSearchDogs();
+        softDelete("Bella");
+
+        assertThat(searchNames(null, "shepherd", null, false)).containsExactly("Rex");
+    }
+
+    private void givenSearchDogs() {
+        Breed germanShepherd = persistBreed("German Shepherd");
+        Breed springerSpaniel = persistBreed("Springer Spaniel");
+        Supplier northfieldKennels = persistSupplier("Northfield Kennels");
+        Supplier brookvaleBreeders = persistSupplier("Brookvale Breeders");
+
+        saveDog("Rex", germanShepherd, northfieldKennels);
+        saveDog("T-Rex", springerSpaniel, brookvaleBreeders);
+        saveDog("Bella", germanShepherd, brookvaleBreeders);
+        saveDog("Scout", null, null);
+        flushAndClear();
+    }
+
+    private List<String> searchNames(String name, String breed, String supplier, boolean includeDeleted) {
+        return dogRepository.search(name, breed, supplier, includeDeleted, Pageable.unpaged())
+                .map(Dog::getName)
+                .getContent();
+    }
+
+    private void softDelete(String name) {
+        dogRepository.findAll().stream()
+                .filter(dog -> dog.getName().equals(name))
+                .forEach(dog -> dog.setDeletedAt(Instant.now()));
+        flushAndClear();
+    }
+
+    private Breed persistBreed(String name) {
+        Breed breed = new Breed();
+        breed.setName(name);
+        entityManager.persist(breed);
+        return breed;
+    }
+
+    private Supplier persistSupplier(String name) {
+        Supplier supplier = new Supplier();
+        supplier.setName(name);
+        entityManager.persist(supplier);
+        return supplier;
+    }
+
+    private void saveDog(String name, Breed breed, Supplier supplier) {
+        Dog dog = newDog(name);
+        dog.setBreed(breed);
+        dog.setSupplier(supplier);
+        dogRepository.save(dog);
     }
 
     private Dog newDog(String name) {

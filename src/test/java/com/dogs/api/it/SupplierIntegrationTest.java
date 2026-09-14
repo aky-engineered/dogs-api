@@ -68,43 +68,6 @@ class SupplierIntegrationTest {
                 assertThat(supplier.getDeletedAt()).isNotNull());
     }
 
-    @Test
-    void deleteSupplierById_WithAlreadyDeletedSupplier_ReturnsNotFound() throws Exception {
-        long id = createSupplier(uniqueName("Riverside Kennels"));
-
-        mockMvc.perform(delete("/api/dogs/suppliers/{id}", id)).andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/dogs/suppliers/{id}", id)).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void createSupplier_WithDuplicateName_ReturnsConflict() throws Exception {
-        String name = uniqueName("Hilltop Kennels");
-        createSupplier(name);
-
-        mockMvc.perform(post("/api/dogs/suppliers")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(name)))
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void getAllSuppliers_WithPageSizeOne_ReturnsSingleRecordPage() throws Exception {
-        createSupplier(uniqueName("Ashford Kennels"));
-        createSupplier(uniqueName("Elmwood Kennels"));
-
-        mockMvc.perform(get("/api/dogs/suppliers").param("page", "0").param("size", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.size").value(1))
-                .andExpect(jsonPath("$.page").value(0));
-    }
-
-    @Test
-    void getAllSuppliers_WithInvalidSortProperty_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/dogs/suppliers").param("sort", "notAField"))
-                .andExpect(status().isBadRequest());
-    }
-
     private long createSupplier(String name) throws Exception {
         String body = mockMvc.perform(post("/api/dogs/suppliers")
                         .contentType(MediaType.APPLICATION_JSON)

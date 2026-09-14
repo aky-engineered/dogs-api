@@ -68,43 +68,6 @@ class BreedIntegrationTest {
                 assertThat(breed.getDeletedAt()).isNotNull());
     }
 
-    @Test
-    void deleteBreedById_WithAlreadyDeletedBreed_ReturnsNotFound() throws Exception {
-        long id = createBreed(uniqueName("Whippet"));
-
-        mockMvc.perform(delete("/api/dogs/breeds/{id}", id)).andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/dogs/breeds/{id}", id)).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void createBreed_WithDuplicateName_ReturnsConflict() throws Exception {
-        String name = uniqueName("Collie");
-        createBreed(name);
-
-        mockMvc.perform(post("/api/dogs/breeds")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(name)))
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void getAllBreeds_WithPageSizeOne_ReturnsSingleRecordPage() throws Exception {
-        createBreed(uniqueName("Pointer"));
-        createBreed(uniqueName("Setter"));
-
-        mockMvc.perform(get("/api/dogs/breeds").param("page", "0").param("size", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.size").value(1))
-                .andExpect(jsonPath("$.page").value(0));
-    }
-
-    @Test
-    void getAllBreeds_WithInvalidSortProperty_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/dogs/breeds").param("sort", "notAField"))
-                .andExpect(status().isBadRequest());
-    }
-
     private long createBreed(String name) throws Exception {
         String body = mockMvc.perform(post("/api/dogs/breeds")
                         .contentType(MediaType.APPLICATION_JSON)

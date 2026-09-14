@@ -3,6 +3,7 @@ package com.dogs.api.service;
 import com.dogs.api.dto.LookupRequest;
 import com.dogs.api.dto.LookupResponse;
 import com.dogs.api.dto.PageResponse;
+import com.dogs.api.exception.InvalidRequestException;
 import com.dogs.api.exception.ResourceNotFoundException;
 import com.dogs.api.mapper.LookupMapper;
 import com.dogs.api.model.DogStatus;
@@ -37,12 +38,18 @@ public class DogStatusService {
 
     @Transactional
     public LookupResponse createDogStatus(final LookupRequest request) {
+        if (request.code() == null) { //TODO - Possible improvement - Have two separate Request/Response classes to enforce validation at the request level rather than service
+            throw new InvalidRequestException("code is required for a status");
+        }
         return lookupMapper.toResponse(dogStatusRepository.saveAndFlush(lookupMapper.toDogStatus(request)));
     }
 
     @Transactional
     public LookupResponse updateDogStatusById(final Long id, final LookupRequest request) {
         DogStatus dogStatus = findActive(id);
+        if (request.code() != null && !request.code().equals(dogStatus.getCode())) {
+            throw new InvalidRequestException("code cannot be changed from " + dogStatus.getCode());
+        }
         lookupMapper.update(request, dogStatus);
         return lookupMapper.toResponse(dogStatusRepository.saveAndFlush(dogStatus));
     }

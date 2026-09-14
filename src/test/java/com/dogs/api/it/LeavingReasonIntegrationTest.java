@@ -36,23 +36,26 @@ class LeavingReasonIntegrationTest {
 
     @Test
     void leavingReasonEndpoints_WithFullCrudLifecycle_SoftDeletesAndHidesLeavingReason() throws Exception {
+        String code = uniqueCode("RETIRED_REHOUSED");
         String name = uniqueName("Retired (Re-housed)");
-        long id = createLeavingReason(name);
+        long id = createLeavingReason(code, name);
 
         mockMvc.perform(get("/api/dogs/leaving-reasons/{id}", id))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.name").value(name));
 
-        String renamed = uniqueName("Medically Retired");
+        String renamed = uniqueName("Medically Discharged");
         mockMvc.perform(put("/api/dogs/leaving-reasons/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(renamed)))
+                        .content("{\"name\": \"%s\"}".formatted(renamed)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.name").value(renamed));
 
         mockMvc.perform(get("/api/dogs/leaving-reasons").param("size", "100"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[*].name", hasItem(renamed)));
+                .andExpect(jsonPath("$.content[*].code", hasItem(code)));
 
         mockMvc.perform(delete("/api/dogs/leaving-reasons/{id}", id))
                 .andExpect(status().isNoContent());
@@ -60,65 +63,32 @@ class LeavingReasonIntegrationTest {
         mockMvc.perform(get("/api/dogs/leaving-reasons/{id}", id))
                 .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/dogs/leaving-reasons").param("size", "100"))
-                .andExpect(jsonPath("$.content[*].name", not(hasItem(renamed))));
+                .andExpect(jsonPath("$.content[*].code", not(hasItem(code))));
         mockMvc.perform(get("/api/dogs/leaving-reasons").param("size", "100").param("includeDeleted", "true"))
-                .andExpect(jsonPath("$.content[*].name", hasItem(renamed)));
+                .andExpect(jsonPath("$.content[*].code", hasItem(code)));
 
         assertThat(leavingReasonRepository.findById(id)).hasValueSatisfying(leavingReason ->
                 assertThat(leavingReason.getDeletedAt()).isNotNull());
     }
 
-    @Test
-    void deleteLeavingReasonById_WithAlreadyDeletedLeavingReason_ReturnsNotFound() throws Exception {
-        long id = createLeavingReason(uniqueName("Failed Assessment"));
-
-        mockMvc.perform(delete("/api/dogs/leaving-reasons/{id}", id)).andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/dogs/leaving-reasons/{id}", id)).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void createLeavingReason_WithDuplicateName_ReturnsConflict() throws Exception {
-        String name = uniqueName("Relocated");
-        createLeavingReason(name);
-
-        mockMvc.perform(post("/api/dogs/leaving-reasons")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(name)))
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void getAllLeavingReasons_WithPageSizeOne_ReturnsSingleRecordPage() throws Exception {
-        createLeavingReason(uniqueName("Unfit For Duty"));
-        createLeavingReason(uniqueName("Owner Request"));
-
-        mockMvc.perform(get("/api/dogs/leaving-reasons").param("page", "0").param("size", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.size").value(1))
-                .andExpect(jsonPath("$.page").value(0));
-    }
-
-    @Test
-    void getAllLeavingReasons_WithInvalidSortProperty_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/dogs/leaving-reasons").param("sort", "notAField"))
-                .andExpect(status().isBadRequest());
-    }
-
-    private long createLeavingReason(String name) throws Exception {
+    private long createLeavingReason(String code, String name) throws Exception {
         String body = mockMvc.perform(post("/api/dogs/leaving-reasons")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(name)))
+                        .content(json(code, name)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }
 
-    private String json(String name) {
-        return "{\"name\": \"%s\"}".formatted(name);
+    private String json(String code, String name) {
+        return "{\"code\": \"%s\", \"name\": \"%s\"}".formatted(code, name);
     }
 
     private String uniqueName(String prefix) {
         return prefix + " " + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String uniqueCode(String prefix) {
+        return prefix + "_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }

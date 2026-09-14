@@ -37,7 +37,7 @@ public class LeavingReasonController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public PageResponse<LookupResponse> getAllLeavingReasons(@ParameterObject Pageable pageable,
-                                                             @RequestParam(defaultValue = "false") boolean includeDeleted) {
+                                                                  @RequestParam(defaultValue = "false") boolean includeDeleted) {
         log.info("Request received for List leaving reasons - page: {}, size: {}, includeDeleted: {}",
                 pageable.getPageNumber(), pageable.getPageSize(), includeDeleted);
         return leavingReasonService.getAllLeavingReasons(pageable, includeDeleted);
@@ -53,7 +53,7 @@ public class LeavingReasonController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public LookupResponse createLeavingReason(@Valid @RequestBody LookupRequest request) {
-        log.info("Request received for Create leaving reason with name: {}", request.name());
+        log.info("Request received for Create leaving reason with code: {} and name: {}", request.code(), request.name());
         return leavingReasonService.createLeavingReason(request);
     }
 

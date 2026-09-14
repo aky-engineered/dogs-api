@@ -26,17 +26,21 @@ class LiquibaseMigrationTest {
     }
 
     @Test
-    void seedsStatuses() {
-        List<String> statuses = jdbcTemplate.queryForList("SELECT name FROM dog_status", String.class);
+    void seededStatuses_WhenMigrationsApplied_HaveCodes() {
+        List<String> codes = jdbcTemplate.queryForList(
+                "SELECT code FROM dog_status WHERE name IN ('In Training', 'In Service', 'Retired', 'Left')", String.class);
 
-        assertThat(statuses).containsExactlyInAnyOrder("In Training", "In Service", "Retired", "Left");
+        assertThat(codes).containsExactlyInAnyOrder("IN_TRAINING", "IN_SERVICE", "RETIRED", "LEFT");
     }
 
     @Test
-    void seedsLeavingReasons() {
-        List<String> reasons = jdbcTemplate.queryForList("SELECT name FROM leaving_reason", String.class);
+    void seededLeavingReasons_WhenMigrationsApplied_HaveCodes() {
+        List<String> codes = jdbcTemplate.queryForList(
+                "SELECT code FROM leaving_reason WHERE name IN "
+                        + "('Transferred', 'Retired (Put Down)', 'KIA', 'Rejected', 'Retired (Re-housed)', 'Died')",
+                String.class);
 
-        assertThat(reasons).containsExactlyInAnyOrder(
-                "Transferred", "Retired (Put Down)", "KIA", "Rejected", "Retired (Re-housed)", "Died");
+        assertThat(codes).containsExactlyInAnyOrder(
+                "TRANSFERRED", "RETIRED_PUT_DOWN", "KIA", "REJECTED", "RETIRED_REHOUSED", "DIED");
     }
 }

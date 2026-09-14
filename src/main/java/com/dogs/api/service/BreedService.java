@@ -3,6 +3,7 @@ package com.dogs.api.service;
 import com.dogs.api.dto.LookupRequest;
 import com.dogs.api.dto.LookupResponse;
 import com.dogs.api.dto.PageResponse;
+import com.dogs.api.exception.InvalidRequestException;
 import com.dogs.api.exception.ResourceNotFoundException;
 import com.dogs.api.mapper.LookupMapper;
 import com.dogs.api.model.Breed;
@@ -37,11 +38,13 @@ public class BreedService {
 
     @Transactional
     public LookupResponse createBreed(final LookupRequest request) {
+        rejectCode(request);
         return lookupMapper.toResponse(breedRepository.saveAndFlush(lookupMapper.toBreed(request)));
     }
 
     @Transactional
     public LookupResponse updateBreedById(final Long id, final LookupRequest request) {
+        rejectCode(request);
         Breed breed = findActive(id);
         lookupMapper.update(request, breed);
         return lookupMapper.toResponse(breedRepository.saveAndFlush(breed));
@@ -50,6 +53,12 @@ public class BreedService {
     @Transactional
     public void deleteBreedById(final Long id) {
         findActive(id).setDeletedAt(Instant.now());
+    }
+
+    private static void rejectCode(final LookupRequest request) {
+        if (request.code() != null) {
+            throw new InvalidRequestException("Breeds do not have a code");
+        }
     }
 
     private Breed findActive(final Long id) {

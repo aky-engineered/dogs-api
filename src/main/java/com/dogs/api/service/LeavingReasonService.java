@@ -3,6 +3,7 @@ package com.dogs.api.service;
 import com.dogs.api.dto.LookupRequest;
 import com.dogs.api.dto.LookupResponse;
 import com.dogs.api.dto.PageResponse;
+import com.dogs.api.exception.InvalidRequestException;
 import com.dogs.api.exception.ResourceNotFoundException;
 import com.dogs.api.mapper.LookupMapper;
 import com.dogs.api.model.LeavingReason;
@@ -37,12 +38,18 @@ public class LeavingReasonService {
 
     @Transactional
     public LookupResponse createLeavingReason(final LookupRequest request) {
+        if (request.code() == null) { //TODO - Possible improvement - Have two separate Request/Response classes to enforce validation at the request level rather than service
+            throw new InvalidRequestException("code is required for a leaving reason");
+        }
         return lookupMapper.toResponse(leavingReasonRepository.saveAndFlush(lookupMapper.toLeavingReason(request)));
     }
 
     @Transactional
     public LookupResponse updateLeavingReasonById(final Long id, final LookupRequest request) {
         LeavingReason leavingReason = findActive(id);
+        if (request.code() != null && !request.code().equals(leavingReason.getCode())) {
+            throw new InvalidRequestException("code cannot be changed from " + leavingReason.getCode());
+        }
         lookupMapper.update(request, leavingReason);
         return lookupMapper.toResponse(leavingReasonRepository.saveAndFlush(leavingReason));
     }

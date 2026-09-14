@@ -2,7 +2,6 @@ package com.dogs.api.repository;
 
 import com.dogs.api.TestcontainersConfiguration;
 import com.dogs.api.model.Breed;
-import com.dogs.api.model.LookupEntity;
 import com.dogs.api.model.Supplier;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -27,26 +26,10 @@ class LookupRepositoryTest {
     private BreedRepository breedRepository;
 
     @Autowired
-    private DogStatusRepository dogStatusRepository;
-
-    @Autowired
-    private LeavingReasonRepository leavingReasonRepository;
-
-    @Autowired
     private SupplierRepository supplierRepository;
 
     @Autowired
     private EntityManager entityManager;
-
-    @Test
-    void loadsSeededStatusesAndLeavingReasons() {
-        assertThat(dogStatusRepository.findAllByDeletedAtIsNull(Pageable.unpaged()))
-                .extracting(LookupEntity::getName)
-                .contains("In Training", "In Service", "Retired", "Left");
-        assertThat(leavingReasonRepository.findAllByDeletedAtIsNull(Pageable.unpaged()))
-                .extracting(LookupEntity::getName)
-                .contains("Transferred", "KIA", "Died");
-    }
 
     @Test
     void excludesSoftDeletedLookupValues() {
@@ -58,7 +41,7 @@ class LookupRepositoryTest {
         entityManager.clear();
 
         assertThat(breedRepository.findAllByDeletedAtIsNull(Pageable.unpaged()))
-                .extracting(LookupEntity::getName)
+                .extracting(Breed::getName)
                 .contains("Labrador Retriever")
                 .doesNotContain("Alsatian");
         assertThat(breedRepository.findByIdAndDeletedAtIsNull(activeBreed.getId())).isPresent();

@@ -36,8 +36,9 @@ public class DogStatusController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public PageResponse<LookupResponse> getAllDogStatuses(@ParameterObject Pageable pageable,
-                                                          @RequestParam(defaultValue = "false") boolean includeDeleted) {
+    public PageResponse<LookupResponse> getAllDogStatuses(
+            @ParameterObject Pageable pageable,
+            @RequestParam(defaultValue = "false") boolean includeDeleted) {
         log.info("Request received for List statuses - page: {}, size: {}, includeDeleted: {}",
                 pageable.getPageNumber(), pageable.getPageSize(), includeDeleted);
         return dogStatusService.getAllDogStatuses(pageable, includeDeleted);
@@ -53,13 +54,14 @@ public class DogStatusController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public LookupResponse createDogStatus(@Valid @RequestBody LookupRequest request) {
-        log.info("Request received for Create status with name: {}", request.name());
+        log.info("Request received for Create status with code: {} and name: {}", request.code(), request.name());
         return dogStatusService.createDogStatus(request);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.OK)
-    public LookupResponse updateDogStatusById(@PathVariable Long id, @Valid @RequestBody LookupRequest request) {
+    public LookupResponse updateDogStatusById(@PathVariable Long id,
+                                                   @Valid @RequestBody LookupRequest request) {
         log.info("Request received for Update status by id: {} with name: {}", id, request.name());
         return dogStatusService.updateDogStatusById(id, request);
     }

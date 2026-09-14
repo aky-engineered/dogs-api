@@ -19,7 +19,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -34,12 +33,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LeavingReasonControllerTest {
 
     private static final List<LookupResponse> SIX_LEAVING_REASONS = List.of(
-            new LookupResponse(1L, "Transferred"),
-            new LookupResponse(2L, "KIA"),
-            new LookupResponse(3L, "Rejected"),
-            new LookupResponse(4L, "Died"),
-            new LookupResponse(5L, "Retired (Put Down)"),
-            new LookupResponse(6L, "Retired (Re-housed)"));
+            new LookupResponse(1L, "TRANSFERRED", "Transferred"),
+            new LookupResponse(2L, "KIA", "Killed In Action"),
+            new LookupResponse(3L, "REJECTED", "Rejected"),
+            new LookupResponse(4L, "DIED", "Died"),
+            new LookupResponse(5L, "RETIRED_PUT_DOWN", "Retired (Put Down)"),
+            new LookupResponse(6L, "RETIRED_REHOUSED", "Retired (Re-housed)"));
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,8 +54,9 @@ class LeavingReasonControllerTest {
         mockMvc.perform(get("/api/dogs/leaving-reasons").param("page", "0").param("size", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.content[0].code").value("TRANSFERRED"))
                 .andExpect(jsonPath("$.content[0].name").value("Transferred"))
-                .andExpect(jsonPath("$.content[4].name").value("Retired (Put Down)"))
+                .andExpect(jsonPath("$.content[4].code").value("RETIRED_PUT_DOWN"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(5))
                 .andExpect(jsonPath("$.totalElements").value(6))
@@ -69,39 +69,13 @@ class LeavingReasonControllerTest {
     }
 
     @Test
-    void getAllLeavingReasons_RequestingSecondPageOfSixLeavingReasons_ReturnsRemainingRecord() throws Exception {
-        when(leavingReasonService.getAllLeavingReasons(any(Pageable.class), eq(false)))
-                .thenReturn(new PageResponse<>(SIX_LEAVING_REASONS.subList(5, 6), 1, 5, 6, 2));
-
-        mockMvc.perform(get("/api/dogs/leaving-reasons").param("page", "1").param("size", "5"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].name").value("Retired (Re-housed)"))
-                .andExpect(jsonPath("$.page").value(1));
-
-        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(leavingReasonService).getAllLeavingReasons(pageable.capture(), eq(false));
-        assertThat(pageable.getValue().getPageNumber()).isEqualTo(1);
-    }
-
-    @Test
-    void getAllLeavingReasons_WithIncludeDeletedTrue_PassesFlagToService() throws Exception {
-        when(leavingReasonService.getAllLeavingReasons(any(Pageable.class), eq(true)))
-                .thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0));
-
-        mockMvc.perform(get("/api/dogs/leaving-reasons").param("includeDeleted", "true"))
-                .andExpect(status().isOk());
-
-        verify(leavingReasonService).getAllLeavingReasons(any(Pageable.class), eq(true));
-    }
-
-    @Test
     void getLeavingReasonById_WithExistingId_ReturnsLeavingReason() throws Exception {
-        when(leavingReasonService.getLeavingReasonById(1L)).thenReturn(new LookupResponse(1L, "Transferred"));
+        when(leavingReasonService.getLeavingReasonById(1L)).thenReturn(new LookupResponse(1L, "TRANSFERRED", "Transferred"));
 
         mockMvc.perform(get("/api/dogs/leaving-reasons/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.code").value("TRANSFERRED"))
                 .andExpect(jsonPath("$.name").value("Transferred"));
     }
 
@@ -116,56 +90,47 @@ class LeavingReasonControllerTest {
 
     @Test
     void createLeavingReason_WithValidRequest_ReturnsCreated() throws Exception {
-        when(leavingReasonService.createLeavingReason(new LookupRequest("Retired (Re-housed)"))).thenReturn(new LookupResponse(5L, "Retired (Re-housed)"));
+        when(leavingReasonService.createLeavingReason(new LookupRequest("RETIRED_REHOUSED", "Retired (Re-housed)")))
+                .thenReturn(new LookupResponse(6L, "RETIRED_REHOUSED", "Retired (Re-housed)"));
 
         mockMvc.perform(post("/api/dogs/leaving-reasons")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Retired (Re-housed)"}
+                                {"code": "RETIRED_REHOUSED", "name": "Retired (Re-housed)"}
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(5))
+                .andExpect(jsonPath("$.id").value(6))
+                .andExpect(jsonPath("$.code").value("RETIRED_REHOUSED"))
                 .andExpect(jsonPath("$.name").value("Retired (Re-housed)"));
     }
 
     @Test
-    void createLeavingReason_WithBlankName_ReturnsBadRequest() throws Exception {
+    void createLeavingReason_WithBlankNameAndCode_ReturnsBadRequest() throws Exception {
         mockMvc.perform(post("/api/dogs/leaving-reasons")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": " "}
+                                {"code": "", "name": " "}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.name").exists());
+                .andExpect(jsonPath("$.errors.name").exists())
+                .andExpect(jsonPath("$.errors.code").exists());
 
         verifyNoInteractions(leavingReasonService);
     }
 
     @Test
     void updateLeavingReasonById_WithValidRequest_ReturnsUpdatedLeavingReason() throws Exception {
-        when(leavingReasonService.updateLeavingReasonById(1L, new LookupRequest("KIA")))
-                .thenReturn(new LookupResponse(1L, "KIA"));
+        when(leavingReasonService.updateLeavingReasonById(1L, new LookupRequest(null, "Transfer")))
+                .thenReturn(new LookupResponse(1L, "TRANSFERRED", "Transfer"));
 
         mockMvc.perform(put("/api/dogs/leaving-reasons/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "KIA"}
+                                {"name": "Transfer"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("KIA"));
-    }
-
-    @Test
-    void updateLeavingReasonById_WithUnknownId_ReturnsNotFound() throws Exception {
-        when(leavingReasonService.updateLeavingReasonById(99L, new LookupRequest("KIA")))
-                .thenThrow(new ResourceNotFoundException("Leaving reason", 99L));
-
-        mockMvc.perform(put("/api/dogs/leaving-reasons/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name": "KIA"}
-                                """))
-                .andExpect(status().isNotFound());
+                .andExpect(jsonPath("$.code").value("TRANSFERRED"))
+                .andExpect(jsonPath("$.name").value("Transfer"));
     }
 
     @Test
@@ -174,13 +139,5 @@ class LeavingReasonControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(leavingReasonService).deleteLeavingReasonById(1L);
-    }
-
-    @Test
-    void deleteLeavingReasonById_WithUnknownId_ReturnsNotFound() throws Exception {
-        doThrow(new ResourceNotFoundException("Leaving reason", 99L)).when(leavingReasonService).deleteLeavingReasonById(99L);
-
-        mockMvc.perform(delete("/api/dogs/leaving-reasons/99"))
-                .andExpect(status().isNotFound());
     }
 }

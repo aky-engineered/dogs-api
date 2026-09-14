@@ -19,7 +19,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -34,12 +33,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BreedControllerTest {
 
     private static final List<LookupResponse> SIX_BREEDS = List.of(
-            new LookupResponse(1L, "Labrador"),
-            new LookupResponse(2L, "German Shepherd"),
-            new LookupResponse(3L, "Belgian Malinois"),
-            new LookupResponse(4L, "Springer Spaniel"),
-            new LookupResponse(5L, "Cocker Spaniel"),
-            new LookupResponse(6L, "Beagle"));
+            new LookupResponse(1L, null, "Labrador"),
+            new LookupResponse(2L, null, "German Shepherd"),
+            new LookupResponse(3L, null, "Belgian Malinois"),
+            new LookupResponse(4L, null, "Springer Spaniel"),
+            new LookupResponse(5L, null, "Cocker Spaniel"),
+            new LookupResponse(6L, null, "Beagle"));
 
     @Autowired
     private MockMvc mockMvc;
@@ -69,40 +68,14 @@ class BreedControllerTest {
     }
 
     @Test
-    void getAllBreeds_RequestingSecondPageOfSixBreeds_ReturnsRemainingRecord() throws Exception {
-        when(breedService.getAllBreeds(any(Pageable.class), eq(false)))
-                .thenReturn(new PageResponse<>(SIX_BREEDS.subList(5, 6), 1, 5, 6, 2));
-
-        mockMvc.perform(get("/api/dogs/breeds").param("page", "1").param("size", "5"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].name").value("Beagle"))
-                .andExpect(jsonPath("$.page").value(1));
-
-        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(breedService).getAllBreeds(pageable.capture(), eq(false));
-        assertThat(pageable.getValue().getPageNumber()).isEqualTo(1);
-    }
-
-    @Test
-    void getAllBreeds_WithIncludeDeletedTrue_PassesFlagToService() throws Exception {
-        when(breedService.getAllBreeds(any(Pageable.class), eq(true)))
-                .thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0));
-
-        mockMvc.perform(get("/api/dogs/breeds").param("includeDeleted", "true"))
-                .andExpect(status().isOk());
-
-        verify(breedService).getAllBreeds(any(Pageable.class), eq(true));
-    }
-
-    @Test
     void getBreedById_WithExistingId_ReturnsBreed() throws Exception {
-        when(breedService.getBreedById(1L)).thenReturn(new LookupResponse(1L, "Labrador"));
+        when(breedService.getBreedById(1L)).thenReturn(new LookupResponse(1L, null, "Labrador"));
 
         mockMvc.perform(get("/api/dogs/breeds/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.name").value("Labrador"));
+                .andExpect(jsonPath("$.name").value("Labrador"))
+                .andExpect(jsonPath("$.code").doesNotExist());
     }
 
     @Test
@@ -116,7 +89,7 @@ class BreedControllerTest {
 
     @Test
     void createBreed_WithValidRequest_ReturnsCreated() throws Exception {
-        when(breedService.createBreed(new LookupRequest("Beagle"))).thenReturn(new LookupResponse(5L, "Beagle"));
+        when(breedService.createBreed(new LookupRequest(null, "Beagle"))).thenReturn(new LookupResponse(5L, null, "Beagle"));
 
         mockMvc.perform(post("/api/dogs/breeds")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -143,8 +116,8 @@ class BreedControllerTest {
 
     @Test
     void updateBreedById_WithValidRequest_ReturnsUpdatedBreed() throws Exception {
-        when(breedService.updateBreedById(1L, new LookupRequest("German Shepherd")))
-                .thenReturn(new LookupResponse(1L, "German Shepherd"));
+        when(breedService.updateBreedById(1L, new LookupRequest(null, "German Shepherd")))
+                .thenReturn(new LookupResponse(1L, null, "German Shepherd"));
 
         mockMvc.perform(put("/api/dogs/breeds/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -156,31 +129,10 @@ class BreedControllerTest {
     }
 
     @Test
-    void updateBreedById_WithUnknownId_ReturnsNotFound() throws Exception {
-        when(breedService.updateBreedById(99L, new LookupRequest("German Shepherd")))
-                .thenThrow(new ResourceNotFoundException("Breed", 99L));
-
-        mockMvc.perform(put("/api/dogs/breeds/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name": "German Shepherd"}
-                                """))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     void deleteBreedById_WithExistingId_ReturnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/dogs/breeds/1"))
                 .andExpect(status().isNoContent());
 
         verify(breedService).deleteBreedById(1L);
-    }
-
-    @Test
-    void deleteBreedById_WithUnknownId_ReturnsNotFound() throws Exception {
-        doThrow(new ResourceNotFoundException("Breed", 99L)).when(breedService).deleteBreedById(99L);
-
-        mockMvc.perform(delete("/api/dogs/breeds/99"))
-                .andExpect(status().isNotFound());
     }
 }

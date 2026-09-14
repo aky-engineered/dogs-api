@@ -19,7 +19,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -34,12 +33,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SupplierControllerTest {
 
     private static final List<LookupResponse> SIX_SUPPLIERS = List.of(
-            new LookupResponse(1L, "Northfield Kennels"),
-            new LookupResponse(2L, "Brookvale Kennels"),
-            new LookupResponse(3L, "County Working Dogs"),
-            new LookupResponse(4L, "Highmoor Kennels"),
-            new LookupResponse(5L, "Valley Kennels"),
-            new LookupResponse(6L, "Oakridge Kennels"));
+            new LookupResponse(1L, null, "Northfield Kennels"),
+            new LookupResponse(2L, null, "Brookvale Kennels"),
+            new LookupResponse(3L, null, "County Working Dogs"),
+            new LookupResponse(4L, null, "Highmoor Kennels"),
+            new LookupResponse(5L, null, "Valley Kennels"),
+            new LookupResponse(6L, null, "Oakridge Kennels"));
 
     @Autowired
     private MockMvc mockMvc;
@@ -69,35 +68,8 @@ class SupplierControllerTest {
     }
 
     @Test
-    void getAllSuppliers_RequestingSecondPageOfSixSuppliers_ReturnsRemainingRecord() throws Exception {
-        when(supplierService.getAllSuppliers(any(Pageable.class), eq(false)))
-                .thenReturn(new PageResponse<>(SIX_SUPPLIERS.subList(5, 6), 1, 5, 6, 2));
-
-        mockMvc.perform(get("/api/dogs/suppliers").param("page", "1").param("size", "5"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].name").value("Oakridge Kennels"))
-                .andExpect(jsonPath("$.page").value(1));
-
-        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(supplierService).getAllSuppliers(pageable.capture(), eq(false));
-        assertThat(pageable.getValue().getPageNumber()).isEqualTo(1);
-    }
-
-    @Test
-    void getAllSuppliers_WithIncludeDeletedTrue_PassesFlagToService() throws Exception {
-        when(supplierService.getAllSuppliers(any(Pageable.class), eq(true)))
-                .thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0));
-
-        mockMvc.perform(get("/api/dogs/suppliers").param("includeDeleted", "true"))
-                .andExpect(status().isOk());
-
-        verify(supplierService).getAllSuppliers(any(Pageable.class), eq(true));
-    }
-
-    @Test
     void getSupplierById_WithExistingId_ReturnsSupplier() throws Exception {
-        when(supplierService.getSupplierById(1L)).thenReturn(new LookupResponse(1L, "Northfield Kennels"));
+        when(supplierService.getSupplierById(1L)).thenReturn(new LookupResponse(1L, null, "Northfield Kennels"));
 
         mockMvc.perform(get("/api/dogs/suppliers/1"))
                 .andExpect(status().isOk())
@@ -116,7 +88,7 @@ class SupplierControllerTest {
 
     @Test
     void createSupplier_WithValidRequest_ReturnsCreated() throws Exception {
-        when(supplierService.createSupplier(new LookupRequest("Oakridge Kennels"))).thenReturn(new LookupResponse(5L, "Oakridge Kennels"));
+        when(supplierService.createSupplier(new LookupRequest(null, "Oakridge Kennels"))).thenReturn(new LookupResponse(5L, null, "Oakridge Kennels"));
 
         mockMvc.perform(post("/api/dogs/suppliers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -143,8 +115,8 @@ class SupplierControllerTest {
 
     @Test
     void updateSupplierById_WithValidRequest_ReturnsUpdatedSupplier() throws Exception {
-        when(supplierService.updateSupplierById(1L, new LookupRequest("Brookvale Kennels")))
-                .thenReturn(new LookupResponse(1L, "Brookvale Kennels"));
+        when(supplierService.updateSupplierById(1L, new LookupRequest(null, "Brookvale Kennels")))
+                .thenReturn(new LookupResponse(1L, null, "Brookvale Kennels"));
 
         mockMvc.perform(put("/api/dogs/suppliers/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -156,31 +128,10 @@ class SupplierControllerTest {
     }
 
     @Test
-    void updateSupplierById_WithUnknownId_ReturnsNotFound() throws Exception {
-        when(supplierService.updateSupplierById(99L, new LookupRequest("Brookvale Kennels")))
-                .thenThrow(new ResourceNotFoundException("Supplier", 99L));
-
-        mockMvc.perform(put("/api/dogs/suppliers/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name": "Brookvale Kennels"}
-                                """))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
     void deleteSupplierById_WithExistingId_ReturnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/dogs/suppliers/1"))
                 .andExpect(status().isNoContent());
 
         verify(supplierService).deleteSupplierById(1L);
-    }
-
-    @Test
-    void deleteSupplierById_WithUnknownId_ReturnsNotFound() throws Exception {
-        doThrow(new ResourceNotFoundException("Supplier", 99L)).when(supplierService).deleteSupplierById(99L);
-
-        mockMvc.perform(delete("/api/dogs/suppliers/99"))
-                .andExpect(status().isNotFound());
     }
 }

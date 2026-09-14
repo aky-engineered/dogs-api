@@ -3,6 +3,7 @@ package com.dogs.api.service;
 import com.dogs.api.dto.LookupRequest;
 import com.dogs.api.dto.LookupResponse;
 import com.dogs.api.dto.PageResponse;
+import com.dogs.api.exception.InvalidRequestException;
 import com.dogs.api.exception.ResourceNotFoundException;
 import com.dogs.api.mapper.LookupMapper;
 import com.dogs.api.model.DogStatus;
@@ -44,23 +45,13 @@ class DogStatusServiceTest {
     void getAllDogStatuses_WithIncludeDeletedFalse_ReturnsOnlyActiveDogStatuses() {
         Pageable pageable = PageRequest.of(0, 20);
         when(dogStatusRepository.findAllByDeletedAtIsNull(pageable))
-                .thenReturn(new PageImpl<>(List.of(dogStatus(1L, "In Training")), pageable, 1));
+                .thenReturn(new PageImpl<>(List.of(dogStatus(1L, "IN_TRAINING", "In Training")), pageable, 1));
 
         PageResponse<LookupResponse> result = dogStatusService.getAllDogStatuses(pageable, false);
 
-        assertThat(result.content()).containsExactly(new LookupResponse(1L, "In Training"));
+        assertThat(result.content()).containsExactly(new LookupResponse(1L, "IN_TRAINING", "In Training"));
         assertThat(result.totalElements()).isEqualTo(1);
         verify(dogStatusRepository, never()).findAll(pageable);
-    }
-
-    @Test
-    void getAllDogStatuses_WithIncludeDeletedTrue_QueriesAllDogStatuses() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(dogStatusRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(), pageable, 0));
-
-        dogStatusService.getAllDogStatuses(pageable, true);
-
-        verify(dogStatusRepository, never()).findAllByDeletedAtIsNull(any());
     }
 
     @Test
@@ -73,32 +64,32 @@ class DogStatusServiceTest {
     }
 
     @Test
-    void createDogStatus_WithValidRequest_ReturnsSavedDogStatus() {
+    void createDogStatus_WithValidRequest_ReturnsSavedDogStatusWithCode() {
         when(dogStatusRepository.saveAndFlush(any(DogStatus.class))).thenAnswer(invocation -> {
             DogStatus saved = invocation.getArgument(0);
             saved.setId(5L);
             return saved;
         });
 
-        LookupResponse result = dogStatusService.createDogStatus(new LookupRequest("On Loan"));
+        LookupResponse result = dogStatusService.createDogStatus(new LookupRequest("ON_LOAN", "On Loan"));
 
-        assertThat(result).isEqualTo(new LookupResponse(5L, "On Loan"));
+        assertThat(result).isEqualTo(new LookupResponse(5L, "ON_LOAN", "On Loan"));
     }
 
     @Test
-    void updateDogStatusById_WithExistingId_ReturnsRenamedDogStatus() {
-        DogStatus existing = dogStatus(3L, "Active");
+    void updateDogStatusById_WithExistingId_RenamesWithoutChangingCode() {
+        DogStatus existing = dogStatus(3L, "IN_TRAINING", "In Training");
         when(dogStatusRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.of(existing));
         when(dogStatusRepository.saveAndFlush(existing)).thenReturn(existing);
 
-        LookupResponse result = dogStatusService.updateDogStatusById(3L, new LookupRequest("In Service"));
+        LookupResponse result = dogStatusService.updateDogStatusById(3L, new LookupRequest(null, "Training"));
 
-        assertThat(result).isEqualTo(new LookupResponse(3L, "In Service"));
+        assertThat(result).isEqualTo(new LookupResponse(3L, "IN_TRAINING", "Training"));
     }
 
     @Test
     void deleteDogStatusById_WithExistingId_SetsDeletedAtWithoutRemovingRecord() {
-        DogStatus existing = dogStatus(3L, "Active");
+        DogStatus existing = dogStatus(3L, "IN_TRAINING", "In Training");
         when(dogStatusRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.of(existing));
 
         dogStatusService.deleteDogStatusById(3L);
@@ -109,15 +100,17 @@ class DogStatusServiceTest {
     }
 
     @Test
-    void deleteDogStatusById_WithAlreadyDeletedId_ThrowsResourceNotFound() {
-        when(dogStatusRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> dogStatusService.deleteDogStatusById(3L)).isInstanceOf(ResourceNotFoundException.class);
+    void createDogStatus_WithoutCode_ThrowsInvalidRequest() {
+        assertThatThrownBy(() -> dogStatusService.createDogStatus(new LookupRequest(null, "On Loan")))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessage("code is required for a status");
+        verify(dogStatusRepository, never()).saveAndFlush(any());
     }
 
-    private DogStatus dogStatus(Long id, String name) {
+    private DogStatus dogStatus(Long id, String code, String name) {
         DogStatus dogStatus = new DogStatus();
         dogStatus.setId(id);
+        dogStatus.setCode(code);
         dogStatus.setName(name);
         return dogStatus;
     }

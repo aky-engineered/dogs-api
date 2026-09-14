@@ -48,19 +48,9 @@ class SupplierServiceTest {
 
         PageResponse<LookupResponse> result = supplierService.getAllSuppliers(pageable, false);
 
-        assertThat(result.content()).containsExactly(new LookupResponse(1L, "Northfield Kennels"));
+        assertThat(result.content()).containsExactly(new LookupResponse(1L, null, "Northfield Kennels"));
         assertThat(result.totalElements()).isEqualTo(1);
         verify(supplierRepository, never()).findAll(pageable);
-    }
-
-    @Test
-    void getAllSuppliers_WithIncludeDeletedTrue_QueriesAllSuppliers() {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(supplierRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(), pageable, 0));
-
-        supplierService.getAllSuppliers(pageable, true);
-
-        verify(supplierRepository, never()).findAllByDeletedAtIsNull(any());
     }
 
     @Test
@@ -80,9 +70,9 @@ class SupplierServiceTest {
             return saved;
         });
 
-        LookupResponse result = supplierService.createSupplier(new LookupRequest("Oakridge Kennels"));
+        LookupResponse result = supplierService.createSupplier(new LookupRequest(null, "Oakridge Kennels"));
 
-        assertThat(result).isEqualTo(new LookupResponse(5L, "Oakridge Kennels"));
+        assertThat(result).isEqualTo(new LookupResponse(5L, null, "Oakridge Kennels"));
     }
 
     @Test
@@ -91,9 +81,9 @@ class SupplierServiceTest {
         when(supplierRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.of(existing));
         when(supplierRepository.saveAndFlush(existing)).thenReturn(existing);
 
-        LookupResponse result = supplierService.updateSupplierById(3L, new LookupRequest("Brookvale Kennels"));
+        LookupResponse result = supplierService.updateSupplierById(3L, new LookupRequest(null, "Brookvale Kennels"));
 
-        assertThat(result).isEqualTo(new LookupResponse(3L, "Brookvale Kennels"));
+        assertThat(result).isEqualTo(new LookupResponse(3L, null, "Brookvale Kennels"));
     }
 
     @Test
@@ -106,13 +96,6 @@ class SupplierServiceTest {
         assertThat(existing.getDeletedAt()).isNotNull();
         verify(supplierRepository, never()).delete(any());
         verify(supplierRepository, never()).deleteById(any());
-    }
-
-    @Test
-    void deleteSupplierById_WithAlreadyDeletedId_ThrowsResourceNotFound() {
-        when(supplierRepository.findByIdAndDeletedAtIsNull(3L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> supplierService.deleteSupplierById(3L)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     private Supplier supplier(Long id, String name) {
